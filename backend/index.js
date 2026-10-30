@@ -65,18 +65,22 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", time: new Date().toISOString() });
 });
 
-// ── API Routes ────────────────────────────────────────────────────────────────
-app.use("/api/auth",          authRoutes);
-app.use("/api/students",      studentRoutes);
-app.use("/api/companies",     companyRoutes);
-app.use("/api/drives",        driveRoutes);
-app.use("/api/applications",  applicationRoutes);
-app.use("/api",               applicationRoutes); // mounts /api/drives/:id/apply, /api/drives/:id/shortlist, /api/drives/:id/shortlist/approve
-app.use("/api",               scheduleRoutes);   // mounts /api/drives/:id/schedule/* and /api/slots/*
-app.use("/api/notifications", notificationRoutes);
-app.use("/api",               assistantRoutes);  // /api/applications/:id/resume-feedback etc.
-app.use("/api/reports",       reportRoutes);
-app.use("/api/admin",         adminRoutes);
+// ── API Routes (mounted under both /api and root for maximum client compatibility) ──
+const apiRouter = express.Router();
+apiRouter.use("/auth",          authRoutes);
+apiRouter.use("/students",      studentRoutes);
+apiRouter.use("/companies",     companyRoutes);
+apiRouter.use("/drives",        driveRoutes);
+apiRouter.use("/applications",  applicationRoutes);
+apiRouter.use("/",              applicationRoutes); // mounts /drives/:id/apply, /drives/:id/shortlist, /drives/:id/shortlist/approve
+apiRouter.use("/",              scheduleRoutes);    // mounts /drives/:id/schedule/* and /slots/*
+apiRouter.use("/notifications", notificationRoutes);
+apiRouter.use("/",              assistantRoutes);   // /applications/:id/resume-feedback etc.
+apiRouter.use("/reports",       reportRoutes);
+apiRouter.use("/admin",         adminRoutes);
+
+app.use("/api", apiRouter);
+app.use("/", apiRouter);
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {
