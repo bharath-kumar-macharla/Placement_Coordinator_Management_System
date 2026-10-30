@@ -1,6 +1,16 @@
 import axios from "axios";
 
-let rawApiUrl = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").trim();
+let rawApiUrl = (import.meta.env.VITE_API_URL || "").trim();
+
+// Smart fallback: if no env var is provided, use the deployed Render backend when not running locally
+if (!rawApiUrl) {
+  if (typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    rawApiUrl = "https://placement-coordinator-management-system.onrender.com/api";
+  } else {
+    rawApiUrl = "http://localhost:5000/api";
+  }
+}
+
 // Ensure the base URL ends with /api (strip trailing slashes first)
 rawApiUrl = rawApiUrl.replace(/\/+$/, "");
 if (!rawApiUrl.endsWith("/api")) {
