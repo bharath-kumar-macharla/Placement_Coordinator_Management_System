@@ -36,14 +36,33 @@ router.get("/overview", asyncHandler(async (req, res) => {
     .from("drives")
     .select("id, title, status, companies(name)");
 
-  const { data: applications } = await supabase
+  const { data: rawApps } = await supabase
     .from("applications")
     .select(`
       id, drive_id, student_id, status, match_score, status_reason, ai_reason, created_at,
       drives(id, title, companies(name)),
-      student_profiles(roll_no, branch, cgpa, backlogs, skills, users(name, email))
+      users!student_id(id, name, email, student_profiles(roll_no, branch, cgpa, backlogs, skills))
     `)
     .order("created_at", { ascending: false });
+
+  const allApps = (rawApps ?? []).map((a) => {
+    const user = a.users || {};
+    const profile = Array.isArray(user.student_profiles)
+      ? user.student_profiles[0] || {}
+      : user.student_profiles || {};
+
+    return {
+      ...a,
+      student_profiles: {
+        ...profile,
+        users: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+      },
+    };
+  });
 
   const { data: students } = await supabase
     .from("users")
@@ -54,7 +73,6 @@ router.get("/overview", asyncHandler(async (req, res) => {
     .from("companies")
     .select("id");
 
-  const allApps = applications ?? [];
   const totalShortlisted = allApps.filter((a) => a.status === "shortlisted").length;
   const totalRejected    = allApps.filter((a) => a.status === "rejected").length;
   const totalApplied     = allApps.filter((a) => a.status === "applied").length;

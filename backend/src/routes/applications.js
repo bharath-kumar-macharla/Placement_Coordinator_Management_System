@@ -134,9 +134,9 @@ router.get("/drives/:id/shortlist", requireRole("coordinator", "admin"), asyncHa
     .from("applications")
     .select(`
       *,
-      student_profiles!inner(
-        branch, year, cgpa, backlogs, skills,
-        users!inner(id, name, email)
+      users!student_id(
+        id, name, email,
+        student_profiles(branch, year, cgpa, backlogs, skills, roll_no)
       )
     `)
     .eq("drive_id", req.params.id)
@@ -146,10 +146,29 @@ router.get("/drives/:id/shortlist", requireRole("coordinator", "admin"), asyncHa
     query = query.eq("status", status);
   }
 
-  const { data: apps, error } = await query;
+  const { data: rawApps, error } = await query;
   if (error) throw new ApiError(500, error.message);
 
-  res.json({ shortlist: apps ?? [], candidates: apps ?? [] });
+  const apps = (rawApps ?? []).map((a) => {
+    const user = a.users || {};
+    const profile = Array.isArray(user.student_profiles)
+      ? user.student_profiles[0] || {}
+      : user.student_profiles || {};
+
+    return {
+      ...a,
+      student_profiles: {
+        ...profile,
+        users: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+      },
+    };
+  });
+
+  res.json({ shortlist: apps, candidates: apps });
 }));
 
 // ── POST /api/drives/:id/shortlist/approve ────────────────────────────────────
@@ -254,8 +273,9 @@ router.get("/", requireRole("coordinator", "admin"), asyncHandler(async (req, re
     .from("applications")
     .select(`
       *,
-      student_profiles!inner(branch, year, cgpa, backlogs, skills,
-        users!inner(id, name, email)
+      users!student_id(
+        id, name, email,
+        student_profiles(branch, year, cgpa, backlogs, skills, roll_no)
       )
     `)
     .eq("drive_id", drive_id);
@@ -263,9 +283,29 @@ router.get("/", requireRole("coordinator", "admin"), asyncHandler(async (req, re
   if (status) query = query.eq("status", status);
   query = query.order("match_score", { ascending: false });
 
-  const { data: applications, error } = await query;
+  const { data: rawApps, error } = await query;
   if (error) throw new ApiError(500, error.message);
-  res.json({ applications: applications ?? [] });
+
+  const applications = (rawApps ?? []).map((a) => {
+    const user = a.users || {};
+    const profile = Array.isArray(user.student_profiles)
+      ? user.student_profiles[0] || {}
+      : user.student_profiles || {};
+
+    return {
+      ...a,
+      student_profiles: {
+        ...profile,
+        users: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        },
+      },
+    };
+  });
+
+  res.json({ applications });
 }));
 
 export default router;
