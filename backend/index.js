@@ -37,8 +37,13 @@ const allowedOrigins = env.CLIENT_URL.split(",").map((o) => o.trim());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, Postman, health checks)
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow requests with no origin (curl, Postman, health checks) or matching origin
+      if (
+        !origin ||
+        allowedOrigins.includes("*") ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app")
+      ) {
         callback(null, true);
       } else {
         callback(new Error(`CORS: origin '${origin}' not allowed`));
